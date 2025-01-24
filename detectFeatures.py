@@ -7,8 +7,10 @@ def detect_earrape_sounds(
     stft_thresh_factor=2.0, 
     mfcc_delta_thresh=0.1, 
     loudness_thresh=-10.0, 
-    repetition_thresh=0.5,
-    min_repetition_duration=0.5
+    repetition_thresh=0.5, 
+    min_repetition_duration=0.5, 
+    smoothing_window_size=3,
+    flag_margin=0.1  # Margin in seconds to extend the flagged intervals
 ):
     """
     Detect "earrape" or chaotic sounds and repetitive sounds that may lead to overstimulation in kids.
@@ -20,6 +22,8 @@ def detect_earrape_sounds(
         loudness_thresh (float): Threshold for loudness in decibels (dBFS).
         repetition_thresh (float): Correlation threshold for repetitive sounds.
         min_repetition_duration (float): Minimum duration in seconds for repetitive sounds.
+        smoothing_window_size (int): Window size for smoothing feature values.
+        flag_margin (float): Margin (in seconds) to extend flagged intervals to capture surrounding spikes.
     
     Returns:
         list: Merged time intervals (in seconds) flagged as chaotic or "earrape" and repetitive sounds.
@@ -33,6 +37,10 @@ def detect_earrape_sounds(
             rms = np.sqrt(np.mean(frame**2))
             loudness.append(20 * np.log10(rms) if rms > 0 else -np.inf)
         return np.array(loudness)
+
+    def smooth_feature(feature, window_size):
+        """Apply a simple moving average to smooth a feature.""" 
+        return np.convolve(feature, np.ones(window_size)/window_size, mode='same')
 
     def merge_intervals(intervals):
         """Merge overlapping intervals."""
@@ -66,24 +74,33 @@ def detect_earrape_sounds(
         stft = np.abs(librosa.stft(y, hop_length=hop_length))
         stft_energy = np.mean(stft, axis=0)
         stft_energy /= np.max(stft_energy)  # Normalize energy
-        rolling_thresh = np.mean(stft_energy) * stft_thresh_factor
+        stft_energy_smoothed = smooth_feature(stft_energy, smoothing_window_size)
 
         # Compute MFCC and MFCC delta
         mfcc = librosa.feature.mfcc(y=y, sr=sr, n_mfcc=13, hop_length=hop_length)
         mfcc_delta = librosa.feature.delta(mfcc)
         mfcc_delta_var = np.var(mfcc_delta, axis=0)
+        mfcc_delta_smoothed = smooth_feature(mfcc_delta_var, smoothing_window_size)
 
         # Compute loudness frame by frame
         loudness = compute_loudness(y, hop_length, frame_size)
+        loudness_smoothed = smooth_feature(loudness, smoothing_window_size)
 
         # Flag intervals for chaotic sounds
         flagged_intervals = []
-        for i, (energy, delta_var) in enumerate(zip(stft_energy, mfcc_delta_var)):
-            if (energy > rolling_thresh and loudness[i] > loudness_thresh) or delta_var < mfcc_delta_thresh:
-                flagged_intervals.append((
-                    i * frame_duration,
-                    (i + 1) * frame_duration
-                ))
+        stft_thresh = np.mean(stft_energy_smoothed) * stft_thresh_factor
+        loudness_thresh_dynamic = np.mean(loudness_smoothed) + loudness_thresh  # Dynamic threshold based on mean loudness
+
+        for i, (energy, delta_var, loud) in enumerate(zip(stft_energy_smoothed, mfcc_delta_smoothed, loudness_smoothed)):
+            # Chaotic flagging conditions
+            if (energy > stft_thresh and loud > loudness_thresh_dynamic) or delta_var < mfcc_delta_thresh:
+                start_time = i * frame_duration
+                end_time = (i + 1) * frame_duration
+                
+                # Extend the flagged interval by a margin (before and after)
+                start_time = max(0, start_time - flag_margin)  # Ensure we don't go below 0
+                end_time = min(len(y) / sr, end_time + flag_margin)  # Ensure we don't exceed the audio duration
+                flagged_intervals.append((start_time, end_time))
 
         # Detect repetitive sounds
         if detect_repetitive_sound(y, sr):
@@ -91,7 +108,7 @@ def detect_earrape_sounds(
 
         # Merge overlapping intervals
         merged_intervals = merge_intervals(flagged_intervals)
-        return merged_intervals, stft_energy, mfcc_delta_var, loudness
+        return merged_intervals, stft_energy_smoothed, mfcc_delta_smoothed, loudness_smoothed
 
     except FileNotFoundError:
         print(f"Error: File not found at {audio_file}")
@@ -151,11 +168,11 @@ flagged_intervals, stft_energy, mfcc_delta_var, loudness = detect_earrape_sounds
 
 # Display results
 if flagged_intervals:
-    print("Flagged 'earrape' or chaotic intervals and repetitive sounds:")
+    print("Flagged intervals indicating overstimulating sounds:")
     for start, end in flagged_intervals:
-        print(f"- From {start:.2f}s to {end:.2f}s")
+        print(f"Start: {start:.2f} s, End: {end:.2f} s")
 else:
-    print("No chaotic sounds or repetitive patterns detected.")
+    print("No overstimulating sounds detected.")
 
-# Visualize
+# Plot the results
 plot_results(flagged_intervals, stft_energy, mfcc_delta_var, loudness, audio_file_path)
