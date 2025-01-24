@@ -25,10 +25,14 @@ def detect_earrape_sounds(
         list: Merged time intervals (in seconds) flagged as chaotic or "earrape" and repetitive sounds.
     """
     
-    def compute_loudness(y):
-        """Compute loudness in decibels (dBFS)."""
-        rms = np.sqrt(np.mean(y**2))
-        return 20 * np.log10(rms) if rms > 0 else -np.inf
+    def compute_loudness(y, hop_length, frame_size):
+        """Compute loudness in decibels (dBFS) for each frame."""
+        loudness = []
+        for i in range(0, len(y) - frame_size, hop_length):
+            frame = y[i:i+frame_size]
+            rms = np.sqrt(np.mean(frame**2))
+            loudness.append(20 * np.log10(rms) if rms > 0 else -np.inf)
+        return np.array(loudness)
 
     def merge_intervals(intervals):
         """Merge overlapping intervals."""
@@ -52,15 +56,16 @@ def detect_earrape_sounds(
         return duration >= min_repetition_duration and autocorr[autocorr_peak] > repetition_thresh
 
     try:
-        # Load the audio file
+        # Load the audio file once and reuse the results
         y, sr = librosa.load(audio_file, sr=None)
         hop_length = 512  # Hop length for STFT and MFCC
+        frame_size = 2048  # Frame size for calculating loudness
         frame_duration = hop_length / sr
 
-        # Compute STFT
+        # Compute STFT and energy
         stft = np.abs(librosa.stft(y, hop_length=hop_length))
         stft_energy = np.mean(stft, axis=0)
-        stft_energy = stft_energy / np.max(stft_energy)  # Normalize
+        stft_energy /= np.max(stft_energy)  # Normalize energy
         rolling_thresh = np.mean(stft_energy) * stft_thresh_factor
 
         # Compute MFCC and MFCC delta
@@ -68,13 +73,13 @@ def detect_earrape_sounds(
         mfcc_delta = librosa.feature.delta(mfcc)
         mfcc_delta_var = np.var(mfcc_delta, axis=0)
 
-        # Compute loudness
-        loudness = compute_loudness(y)
+        # Compute loudness frame by frame
+        loudness = compute_loudness(y, hop_length, frame_size)
 
         # Flag intervals for chaotic sounds
         flagged_intervals = []
         for i, (energy, delta_var) in enumerate(zip(stft_energy, mfcc_delta_var)):
-            if (energy > rolling_thresh and loudness > loudness_thresh) or delta_var < mfcc_delta_thresh:
+            if (energy > rolling_thresh and loudness[i] > loudness_thresh) or delta_var < mfcc_delta_thresh:
                 flagged_intervals.append((
                     i * frame_duration,
                     (i + 1) * frame_duration
@@ -95,23 +100,15 @@ def detect_earrape_sounds(
         print(f"An error occurred: {e}")
         return [], [], [], []
 
-
-# Example Usage
-audio_file_path = "sampleAudio.mp3"  # Replace with your audio file path
-flagged_intervals, stft_energy, mfcc_delta_var, loudness = detect_earrape_sounds(audio_file_path)
-
-# Display results
-if flagged_intervals:
-    print("Flagged 'earrape' or chaotic intervals and repetitive sounds:")
-    for start, end in flagged_intervals:
-        print(f"- From {start:.2f}s to {end:.2f}s")
-else:
-    print("No chaotic sounds or repetitive patterns detected.")
-
-# Optional Enhanced Visualization
-if flagged_intervals:
+def plot_results(flagged_intervals, stft_energy, mfcc_delta_var, loudness, audio_file_path):
+    """Helper function to visualize results."""
+    if not flagged_intervals:
+        return
+    
+    # Load audio again for visualization
     y, sr = librosa.load(audio_file_path, sr=None)
-    times = librosa.frames_to_time(range(len(stft_energy)), sr=sr, hop_length=512)
+    hop_length = 512
+    times = librosa.frames_to_time(range(len(stft_energy)), sr=sr, hop_length=hop_length)
 
     plt.figure(figsize=(15, 8))
 
@@ -135,7 +132,8 @@ if flagged_intervals:
 
     # Plot Loudness
     plt.subplot(3, 1, 3)
-    plt.plot(times, [loudness] * len(times), label="Loudness", color="green")
+    time_loudness = librosa.frames_to_time(range(len(loudness)), sr=sr, hop_length=hop_length)
+    plt.plot(time_loudness, loudness, label="Loudness", color="green")
     plt.title("Loudness (dBFS)")
     plt.xlabel("Time (s)")
     plt.ylabel("Loudness (dBFS)")
@@ -146,3 +144,18 @@ if flagged_intervals:
     plt.tight_layout()
     plt.legend(loc="upper right")
     plt.show()
+
+# Example Usage
+audio_file_path = "sampleAudio.mp3"  # Replace with your audio file path
+flagged_intervals, stft_energy, mfcc_delta_var, loudness = detect_earrape_sounds(audio_file_path)
+
+# Display results
+if flagged_intervals:
+    print("Flagged 'earrape' or chaotic intervals and repetitive sounds:")
+    for start, end in flagged_intervals:
+        print(f"- From {start:.2f}s to {end:.2f}s")
+else:
+    print("No chaotic sounds or repetitive patterns detected.")
+
+# Visualize
+plot_results(flagged_intervals, stft_energy, mfcc_delta_var, loudness, audio_file_path)
