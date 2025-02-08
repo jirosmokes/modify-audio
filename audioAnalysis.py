@@ -5,7 +5,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy.signal import correlate
 
-
 def create_directory_if_not_exists(directory):
     """Ensure the directory exists, create it if it doesn't."""
     if not os.path.exists(directory):

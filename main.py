@@ -11,7 +11,6 @@ from PyQt5.QtWidgets import (
 from extractAudio import extract_audio, create_video_without_audio
 from audioAnalysis import analyze_audio_stft, analyze_audio_mfcc, visualize_loudness
 
-
 class ProcessingThread(QThread):
     progress = pyqtSignal(int)
     completed = pyqtSignal(str, str)

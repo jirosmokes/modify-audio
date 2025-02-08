@@ -1,7 +1,6 @@
 from moviepy import VideoFileClip, AudioFileClip
 import os
 
-
 def extract_audio(mp4_file, audio_output_folder, audio_file):
     try:
         # Ensure the audio output folder exists
