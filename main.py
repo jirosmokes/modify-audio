@@ -105,7 +105,7 @@ class MainApp(QMainWindow):
         self.setup_main_page()
         self.setup_results_page()
         # Set the default page to be the results page
-        self.stacked_widget.setCurrentWidget(self.results_page)
+        #self.stacked_widget.setCurrentWidget(self.results_page)
 
     def setup_main_page(self):
         layout = QHBoxLayout(self.main_page)
