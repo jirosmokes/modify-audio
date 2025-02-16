@@ -8,8 +8,7 @@ from PyQt5.QtWidgets import (
     QMessageBox, QMainWindow, QStackedWidget, QProgressBar
 )
 
-from extractAudio import extract_audio, create_video_without_audio
-from audioAnalysis import analyze_audio_stft, analyze_audio_mfcc, visualize_loudness
+from extractAudio import extract_audio_batch, remove_audio_batch
 
 class ProcessingThread(QThread):
     progress = pyqtSignal(int)
@@ -26,16 +25,6 @@ class ProcessingThread(QThread):
             # Define the folder paths
             audio_output_folder = "extracted_audio_folder"
             video_output_folder = "video_without_audio_folder"
-            stft_output_folder = "stft_spectrogram_images"
-            mfcc_output_folder = "mfcc_spectrogram_images"
-            loudness_output_folder = "loudness_images"
-
-            # Create output folders
-            os.makedirs(audio_output_folder, exist_ok=True)
-            os.makedirs(video_output_folder, exist_ok=True)
-            os.makedirs(stft_output_folder, exist_ok=True)
-            os.makedirs(mfcc_output_folder, exist_ok=True)
-            os.makedirs(loudness_output_folder, exist_ok=True)
 
             # Generate unique filenames
             audio_filename = f"extracted_audio_{self.video_counter}.mp3"
@@ -46,25 +35,17 @@ class ProcessingThread(QThread):
 
             # Step 1: Extract audio
             self.progress.emit(25)
-            extracted_audio = extract_audio(self.file_path, audio_output_folder, audio_file)
+            extracted_audio = extract_audio_batch(self.file_path, audio_output_folder, audio_file)
             if not extracted_audio:
                 self.error.emit("Failed to extract audio from the video.")
                 return
 
-            # Step 2: Visualize loudness
-            self.progress.emit(50)
-            visualize_loudness(extracted_audio, threshold_loudness=0.1, output_dir=loudness_output_folder)
-
             # Step 3: Create video without audio
-            video_without_audio = create_video_without_audio(self.file_path, video_output_folder, video_without_audio_file)
+            self.progress.emit(50)
+            video_without_audio = remove_audio_batch(self.file_path, video_output_folder, video_without_audio_file)
             if not video_without_audio:
                 self.error.emit("Failed to create video without audio.")
                 return
-
-            # Step 4: Perform audio analysis (STFT and MFCC)
-            self.progress.emit(75)
-            analyze_audio_stft(extracted_audio, stft_output_folder)
-            analyze_audio_mfcc(extracted_audio, mfcc_output_folder)
 
             # Finalize
             self.progress.emit(100)
