@@ -8,7 +8,6 @@ from PyQt5.QtWidgets import (
     QMessageBox, QMainWindow, QStackedWidget, QProgressBar
 )
 
-from extractAudio import extract_audio_batch, remove_audio_batch
 
 class ProcessingThread(QThread):
     progress = pyqtSignal(int)
@@ -35,17 +34,17 @@ class ProcessingThread(QThread):
 
             # Step 1: Extract audio
             self.progress.emit(25)
-            extracted_audio = extract_audio_batch(self.file_path, audio_output_folder, audio_file)
-            if not extracted_audio:
-                self.error.emit("Failed to extract audio from the video.")
-                return
-
-            # Step 3: Create video without audio
-            self.progress.emit(50)
-            video_without_audio = remove_audio_batch(self.file_path, video_output_folder, video_without_audio_file)
-            if not video_without_audio:
-                self.error.emit("Failed to create video without audio.")
-                return
+            # extracted_audio = extract_audio_batch(self.file_path, audio_output_folder, audio_file)
+            # if not extracted_audio:
+            #     self.error.emit("Failed to extract audio from the video.")
+            #     return
+            #
+            # # Step 3: Create video without audio
+            # self.progress.emit(50)
+            # video_without_audio = remove_audio_batch(self.file_path, video_output_folder, video_without_audio_file)
+            # if not video_without_audio:
+            #     self.error.emit("Failed to create video without audio.")
+            #     return
 
             # Finalize
             self.progress.emit(100)
