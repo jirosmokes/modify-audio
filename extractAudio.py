@@ -2,7 +2,7 @@ from moviepy import VideoFileClip
 import os
 
 # Define category folders
-categories = ["Chaotic", "High Frequency", "High Intensity", "Abrupt", "Repetitive"]
+categories = ["Chaotic", "High Frequency", "High Intensity", "Abrupt", "Repetitive", "Non-Overstimulating"]
 
 # Base directories
 raw_dataset_folder = os.path.join(os.getcwd(), "raw_dataset")
@@ -82,4 +82,4 @@ def remove_audio_batch():
 
 # Run the functions
 extract_audio_batch()
-remove_audio_batch()
+# remove_audio_batch()
