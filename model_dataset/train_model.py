@@ -7,16 +7,19 @@ import pickle  # Import pickle to save training history
 
 # Define dataset path
 dataset_path = "C:/Akira/modify-audio/model_dataset"
-train_dir = os.path.join(dataset_path, "train-data")
-val_dir = os.path.join(dataset_path, "validate-data")
+train_dir = os.path.join(dataset_path, "train")
+val_dir = os.path.join(dataset_path, "val")
 
 # Image preprocessing
-train_datagen = ImageDataGenerator(rescale=1.0/255, validation_split=0.2)
+train_datagen = ImageDataGenerator(rescale=1.0/255)
+val_datagen = ImageDataGenerator(rescale=1.0/255)
+
 train_generator = train_datagen.flow_from_directory(
-    train_dir, target_size=(224, 224), batch_size=32, class_mode='binary', subset="training"
+    train_dir, target_size=(224, 224), batch_size=32, class_mode='binary'
 )
-val_generator = train_datagen.flow_from_directory(
-    val_dir, target_size=(224, 224), batch_size=32, class_mode='binary', subset="validation"
+
+val_generator = val_datagen.flow_from_directory(  # Use separate generator for validation
+    val_dir, target_size=(224, 224), batch_size=32, class_mode='binary'
 )
 
 # Load VGG16 model

@@ -3,7 +3,7 @@ import numpy as np
 from tensorflow.keras.preprocessing import image
 
 # Load the trained model
-model = tf.keras.models.load_model("overstimulating_audio_detector.h5")
+model = tf.keras.models.load_model("audio-detector.h5")
 
 # Function to predict a new image
 def predict_image(img_path):
@@ -15,6 +15,6 @@ def predict_image(img_path):
     return "Overstimulating" if prediction[0][0] > 0.5 else "Non-Overstimulating"
 
 # Test on a sample image
-test_image_path = "test-data/test-spectro-7.png"
+test_image_path = "test-data/test-spectro-2.png"
 result = predict_image(test_image_path)
 print(f"Prediction: {result}")

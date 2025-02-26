@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import tensorflow as tf
 
 # Load trained model
-model = tf.keras.models.load_model("overstimulating_audio_detector.h5")
+model = tf.keras.models.load_model("audio_detector.h5")
 
 
 # Plot training history
