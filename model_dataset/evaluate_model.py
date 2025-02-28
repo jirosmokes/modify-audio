@@ -2,11 +2,31 @@ import matplotlib.pyplot as plt
 import tensorflow as tf
 
 # Load trained model
-model = tf.keras.models.load_model("audio_detector.h5")
+model = tf.keras.models.load_model("overstimulating_audio_detector.h5")
 
 
 # Plot training history
 def plot_training_history(history):
+    plt.figure(figsize=(12, 5))
+
+    # Accuracy plot
+    plt.subplot(1, 2, 1)
+    plt.plot(history['accuracy'], label='Train Accuracy')
+    plt.plot(history['val_accuracy'], label='Validation Accuracy')
+    plt.xlabel('Epoch')
+    plt.ylabel('Accuracy')
+    plt.legend()
+
+    # Loss plot
+    plt.subplot(1, 2, 2)
+    plt.plot(history['loss'], label='Train Loss')
+    plt.plot(history['val_loss'], label='Validation Loss')
+    plt.xlabel('Epoch')
+    plt.ylabel('Loss')
+    plt.legend()
+
+    plt.show()
+
     plt.figure(figsize=(12, 5))
 
     # Accuracy plot
