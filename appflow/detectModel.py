@@ -18,8 +18,8 @@ def natural_sort_key(filename):
     """Extracts numbers from filenames for correct numerical sorting."""
     return [int(text) if text.isdigit() else text.lower() for text in re.split(r"(\d+)", filename)]
 
-def detect_overstimulating_segments(segment_folder, ai_model, segment_length=4.0):
-    """Detects overstimulating segments from spectrogram images with correct timestamps."""
+def detect_overstimulating_segments(segment_folder, ai_model, segment_length=4.0, threshold=0.75):
+    """Detects overstimulating segments from spectrogram images with confidence scores."""
     overstim_results = []
 
     try:
@@ -40,40 +40,54 @@ def detect_overstimulating_segments(segment_folder, ai_model, segment_length=4.0
 
                 # Predict overstimulation
                 prediction = ai_model.predict(img_array)
-                is_overstim = bool(prediction[0] > 0.5)  # Convert to boolean
+                confidence = float(prediction[0])  # Convert NumPy array to float
+                is_overstim = confidence > threshold  # Apply threshold
 
                 # Calculate time range
                 start_time = round(i * segment_length, 2)
                 end_time = round(start_time + segment_length, 2)
 
-                # Append result with correct key
+                # Append result with confidence score
                 overstim_results.append({
                     "segment": segment_file,
                     "start_time": start_time,
                     "end_time": end_time,
-                    "overstimulating": is_overstim  # ✅ Always included
+                    "overstimulating": is_overstim,
+                    "confidence": round(confidence, 4)  # ✅ Confidence added for analysis
                 })
             except Exception as e:
                 print(f"Error processing {segment_file}: {e}")
 
     return overstim_results
 
+def save_and_print_results(overstim_results, output_json_path="overstimulating_segments.json"):
+    """
+    Saves the overstimulating segment detection results to a JSON file and prints the results with confidence scores.
+
+    :param overstim_results: List of dictionaries containing segment information.
+    :param output_json_path: Path to save the JSON file.
+    """
+    try:
+        with open(output_json_path, "w") as json_file:
+            json.dump(overstim_results, json_file, indent=4)
+        print(f"Overstimulating segments detection completed. Results saved to {output_json_path}.")
+    except Exception as e:
+        print(f"Error saving results to JSON: {e}")
+
+    # Print results with confidence scores
+    for segment in overstim_results:
+        print(f"Segment: {segment['segment']}, Time Range: {segment['start_time']} - {segment['end_time']} sec, "
+              f"Overstimulating: {segment['overstimulating']}, Confidence: {segment['confidence']}")
+
+# Example Usage
 # Load AI model
-ai_model = load_ai_model()
-segment_folder = "spectrogram_segments"  # Folder containing segmented spectrogram images
+# ai_model = load_ai_model()
+# segment_folder = "spectrogram_segments"  # Folder containing segmented spectrogram images
+#
+# # Detect overstimulating segments
+# overstim_results = detect_overstimulating_segments(segment_folder, ai_model)
+#
+# save_and_print_results(overstim_results)
 
-# Detect overstimulating segments
-overstim_results = detect_overstimulating_segments(segment_folder, ai_model)
 
-# Save results to JSON file
-output_json_path = "overstimulating_segments.json"
-try:
-    with open(output_json_path, "w") as json_file:
-        json.dump(overstim_results, json_file, indent=4)
-    print(f"Overstimulating segments detection completed. Results saved to {output_json_path}.")
-except Exception as e:
-    print(f"Error saving results to JSON: {e}")
 
-# Print results
-for segment in overstim_results:
-    print(f"Segment: {segment['segment']}, Time Range: {segment['start_time']} - {segment['end_time']} sec, Overstimulating: {segment['overstimulating']}")
