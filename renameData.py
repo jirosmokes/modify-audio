@@ -1,10 +1,10 @@
 import os
 
 # Set the parent directory containing multiple folders
-parent_directory = "raw_dataset"  # Change this to your actual parent directory
+parent_directory = "spectrogram_dataset"  # Change this to your actual parent directory
 
 # Allowed folder names
-allowed_folders = {"Chaotic", "High Frequency", "High Intensity", "Abrupt", "Repetitive"}
+allowed_folders = {"Chaotic", "High Frequency", "High Intensity", "Abrupt", "Repetitive","Non-Overstimulating"}
 
 # Loop through each folder inside the parent directory
 for folder_name in os.listdir(parent_directory):
@@ -32,7 +32,7 @@ for folder_name in os.listdir(parent_directory):
         file_extension = os.path.splitext(file_name)[1]
 
         # Generate the expected correct filename
-        correct_name = f"{folder_name}-{counter}{file_extension}"
+        correct_name = f"Not-O-{counter}{file_extension}"
         new_path = os.path.join(folder_path, correct_name)
 
         # Skip renaming if the filename is already correct
